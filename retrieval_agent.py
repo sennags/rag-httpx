@@ -29,8 +29,8 @@ class SearchResult:
 class RetrievalAgent:
     """Especialista no corpus e, futuramente, na busca semantica."""
 
-    model_name = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-    minimum_evidence_score = 0.25
+    model_name = "intfloat/multilingual-e5-small"
+    minimum_evidence_score = 0.80
 
     def __init__(self) -> None:
         self._model = None
@@ -82,7 +82,7 @@ class RetrievalAgent:
 
         model = self._get_model()
         embeddings = model.encode(
-            [chunk.text for chunk in chunks],
+            [f"passage: {chunk.text}" for chunk in chunks],
             normalize_embeddings=True,
             show_progress_bar=True,
         )
@@ -100,7 +100,7 @@ class RetrievalAgent:
             raise RuntimeError("O indice ainda nao foi criado. Indexe o corpus antes de buscar.")
 
         question_embedding = self._get_model().encode(
-            question, normalize_embeddings=True
+            f"query: {question}", normalize_embeddings=True
         )
         scores = self._embeddings @ question_embedding
         best_indexes = scores.argsort()[::-1][:top_k]

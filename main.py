@@ -64,6 +64,14 @@ class RAGApplication:
                 contents=self._build_generation_prompt(question, results),
             )
         except Exception as error:
+            if getattr(error, "code", None) == 429:
+                raise RuntimeError(
+                    "O limite de uso do Gemini foi atingido. Tente novamente mais tarde."
+                ) from error
+            if getattr(error, "code", None) in {500, 503}:
+                raise RuntimeError(
+                    "O Gemini esta temporariamente indisponivel. Tente novamente mais tarde."
+                ) from error
             raise RuntimeError(
                 "O Gemini nao respondeu. Verifique a chave, o modelo e o limite de uso."
             ) from error

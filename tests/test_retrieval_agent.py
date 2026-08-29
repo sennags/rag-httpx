@@ -51,7 +51,7 @@ class RetrievalAgentTests(unittest.TestCase):
 
     def test_low_score_is_reported_as_insufficient_evidence(self) -> None:
         chunk = DocumentChunk("docs/guide.md:1", "text", "docs/guide.md", "Guide")
-        result = SearchResult(rank=1, score=0.10, chunk=chunk)
+        result = SearchResult(rank=1, score=0.79, chunk=chunk)
 
         self.assertFalse(RetrievalAgent().has_sufficient_evidence([result]))
 

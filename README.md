@@ -61,6 +61,11 @@ etapas, na recuperacao semantica.
    ```
 
    A chave nao deve ser adicionada a arquivos, commits, README ou video.
+8. Para executar a avaliacao de recuperacao com oito perguntas proprias:
+
+   ```bash
+   python evaluate_retrieval.py
+   ```
 
 ## Estado atual
 
@@ -92,12 +97,13 @@ de origem na saida da busca.
 
 ### Embeddings e busca
 
-- Modelo: `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`.
+- Modelo: `intfloat/multilingual-e5-small`.
 - Similaridade: produto escalar entre vetores normalizados, equivalente a
   similaridade cosseno.
 - `top_k`: 3 por padrao, limitado a valores entre 3 e 5.
-- Justificativa: o modelo e publico, executa localmente e representa perguntas
-  em portugues e documentacao em ingles no mesmo espaco vetorial.
+- Justificativa: o modelo e publico, executa localmente e usa os prefixos
+  `query:` e `passage:` para distinguir perguntas de documentos. Na avaliacao
+  local, ele recuperou as 8 fontes esperadas no top 3.
 
 ### Guardrails
 
@@ -105,7 +111,7 @@ de origem na saida da busca.
 - `top_k` deve ser um inteiro entre 3 e 5.
 - O indice precisa existir antes da busca.
 - Um corpus sem chunks nao pode ser indexado.
-- Score maximo abaixo de `0.25` gera aviso de possivel pergunta fora do escopo.
+- Score maximo abaixo de `0.80` gera aviso de possivel pergunta fora do escopo.
 - O Gemini nao e chamado quando a evidencia recuperada e fraca.
 - O prompt limita a resposta ao contexto recuperado e exige citacoes das fontes.
 
@@ -119,7 +125,13 @@ de origem na saida da busca.
 
 A divisao por palavras simplifica Markdown e blocos de codigo. Os scores de
 similaridade indicam proximidade vetorial, nao probabilidade ou garantia factual.
-O limiar de `0.25` e experimental e sera reavaliado com as perguntas de teste.
+O limiar de `0.80` foi calibrado para o modelo E5 com esta avaliacao: as oito
+perguntas relacionadas tiveram scores maximos entre `0.8379` e `0.8853`, enquanto
+a pergunta fora do escopo testada marcou `0.7597`. Ele continua experimental e
+deve ser reavaliado com novas perguntas.
+O Gemini e uma extensao opcional e pode retornar indisponibilidade temporaria
+ou limite de uso. Nessas situacoes, a busca local continua retornando os trechos
+e fontes sem depender da API.
 Consultas amplas podem recuperar uma secao relacionada, mas nao necessariamente
 a mais didatica. Por exemplo, uma pergunta sobre recursos do HTTPX priorizou
 dependencias e pacotes relacionados em vez da lista principal de funcionalidades.
@@ -131,7 +143,7 @@ dependencias e pacotes relacionados em vez da lista principal de funcionalidades
 - Pergunta: `Como desativar o timeout de uma requisicao?`
 - Resultado esperado: instrucao com `timeout=None`.
 - Resultado observado: `docs/advanced/timeouts.md`, secao `Setting and disabling
-  timeouts`, ficou na primeira posicao com score `0.4255`.
+  timeouts`, apareceu entre os tres primeiros resultados.
 - O resultado foi relevante: sim. O trecho mostra `timeout=None` para requisicao
   individual e para cliente.
 - Geracao opcional: Gemini respondeu usando esse trecho e citou
@@ -149,10 +161,25 @@ dependencias e pacotes relacionados em vez da lista principal de funcionalidades
 ### 3. Pergunta fora do escopo
 
 - Pergunta: `Qual e a capital da Franca?`
-- Como o sistema reagiu: mostrou apenas scores baixos, com maximo de `0.1070`, e
+- Como o sistema reagiu: o melhor score foi `0.7597`, abaixo do limiar de `0.80`, e
   avisou que nao havia evidencia suficiente na documentacao.
 - Como essa reacao poderia melhorar: um limiar calibrado com mais perguntas e
   uma resposta gerada que se recuse a responder sem contexto suficiente.
+
+## Avaliacao da recuperacao
+
+O script `evaluate_retrieval.py` mede se uma fonte esperada aparece no `top 3`
+para oito perguntas proprias. Ele nao reproduz as perguntas reservadas da
+correcao; serve para testar e justificar ajustes na recuperacao antes da entrega.
+
+| Estrategia | Fontes esperadas no top 3 |
+|---|---:|
+| `paraphrase-multilingual-MiniLM-L12-v2` | 6/8 |
+| MiniLM com caminho e secao adicionados ao texto | 5/8 |
+| `intfloat/multilingual-e5-small` com `query:` e `passage:` | 8/8 |
+
+O E5 foi escolhido por apresentar melhor recuperacao nessa avaliacao. Essa e
+uma amostra pequena e nao substitui as perguntas reservadas da correcao.
 
 ## Uso de ferramentas de IA
 
