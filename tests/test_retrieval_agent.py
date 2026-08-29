@@ -41,6 +41,10 @@ class RetrievalAgentTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "pergunta nao pode estar vazia"):
             RetrievalAgent().search("   ")
 
+    def test_search_rejects_a_very_short_question(self) -> None:
+        with self.assertRaisesRegex(ValueError, "pelo menos 4 caracteres"):
+            RetrievalAgent().search("oii")
+
     def test_search_rejects_invalid_top_k_before_indexing(self) -> None:
         with self.assertRaisesRegex(ValueError, "top_k deve ser um inteiro"):
             RetrievalAgent().search("Como usar HTTPX?", top_k=2)

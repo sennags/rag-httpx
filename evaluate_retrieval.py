@@ -53,8 +53,7 @@ EVALUATION_CASES = (
 def main() -> None:
     repository_dir = Path(__file__).with_name("data") / "httpx"
     application = RAGApplication(repository_dir)
-    _, chunks = application.prepare_corpus()
-    application.retrieval_agent.create_index(chunks)
+    application.prepare_index()
 
     hits = 0
     for number, case in enumerate(EVALUATION_CASES, start=1):

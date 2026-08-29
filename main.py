@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import os
 import subprocess
 from pathlib import Path
@@ -16,6 +17,8 @@ HTTPX_REPOSITORY = "https://github.com/encode/httpx.git"
 HTTPX_COMMIT = "b5addb64f0161ff6bfe94c124ef76f6a1fba5254"
 EXPECTED_DOCUMENT_COUNT = 23
 GEMINI_MODEL = "gemini-3.6-flash"
+CHUNK_SIZE = 80
+CHUNK_OVERLAP = 15
 
 
 class RAGApplication:
@@ -25,12 +28,27 @@ class RAGApplication:
         self.repository_dir = repository_dir
         self.retrieval_agent = RetrievalAgent()
 
-    def prepare_corpus(self) -> tuple[list[Path], list[DocumentChunk]]:
-        """Garante o commit exigido e delega a preparacao ao subagente."""
+    def prepare_index(self) -> tuple[list[Path], list[DocumentChunk], bool]:
+        """Carrega o indice local ou o recria quando o corpus mudou."""
         self._obtain_httpx_repository()
         documents = self.retrieval_agent.find_markdown_documents(self.repository_dir)
-        chunks = self.retrieval_agent.build_chunks(self.repository_dir)
-        return documents, chunks
+        metadata = {
+            "commit": HTTPX_COMMIT,
+            "model": self.retrieval_agent.model_name,
+            "chunk_size": CHUNK_SIZE,
+            "chunk_overlap": CHUNK_OVERLAP,
+            "corpus_signature": self._corpus_signature(documents),
+        }
+        cache_path = self.repository_dir.parent / "rag_index.pkl"
+        if self.retrieval_agent.load_index(cache_path, metadata):
+            return documents, self.retrieval_agent.chunks, True
+
+        chunks = self.retrieval_agent.build_chunks(
+            self.repository_dir, CHUNK_SIZE, CHUNK_OVERLAP
+        )
+        self.retrieval_agent.create_index(chunks)
+        self.retrieval_agent.save_index(cache_path, metadata)
+        return documents, chunks, False
 
     def _obtain_httpx_repository(self) -> None:
         if not self.repository_dir.exists():
@@ -41,8 +59,21 @@ class RAGApplication:
                 f"O caminho ja existe, mas nao e um repositorio Git: {self.repository_dir}"
             )
 
-        self._run_git("-C", str(self.repository_dir), "fetch", "origin", HTTPX_COMMIT)
-        self._run_git("-C", str(self.repository_dir), "checkout", "--detach", HTTPX_COMMIT)
+        current_commit = self._run_git(
+            "-C", str(self.repository_dir), "rev-parse", "HEAD"
+        )
+        if current_commit != HTTPX_COMMIT:
+            self._run_git("-C", str(self.repository_dir), "fetch", "origin", HTTPX_COMMIT)
+            self._run_git("-C", str(self.repository_dir), "checkout", "--detach", HTTPX_COMMIT)
+
+    def _corpus_signature(self, documents: list[Path]) -> str:
+        """Cria uma assinatura barata para invalidar o cache se arquivos mudarem."""
+        signature = hashlib.sha256()
+        for document in documents:
+            stats = document.stat()
+            relative_path = document.relative_to(self.repository_dir).as_posix()
+            signature.update(f"{relative_path}:{stats.st_size}:{stats.st_mtime_ns}".encode())
+        return signature.hexdigest()
 
     def generate_answer(self, question: str, results: list[SearchResult]) -> str:
         """Gera uma resposta somente a partir dos resultados recuperados."""
@@ -107,11 +138,12 @@ CONTEXTO:
 """
 
     @staticmethod
-    def _run_git(*arguments: str) -> None:
+    def _run_git(*arguments: str) -> str:
         try:
-            subprocess.run(
+            result = subprocess.run(
                 ["git", *arguments], check=True, text=True, capture_output=True
             )
+            return result.stdout.strip()
         except subprocess.CalledProcessError as error:
             message = error.stderr.strip() or error.stdout.strip() or str(error)
             raise RuntimeError(f"Falha ao executar Git: {message}") from error
@@ -154,7 +186,7 @@ def main() -> None:
     load_dotenv(Path(__file__).with_name(".env"))
     arguments = parse_arguments()
     application = RAGApplication(arguments.repository_dir)
-    documents, chunks = application.prepare_corpus()
+    documents, chunks, loaded_from_cache = application.prepare_index()
 
     print(f"Documentos Markdown encontrados: {len(documents)}")
     if arguments.inspect_corpus:
@@ -168,7 +200,10 @@ def main() -> None:
             "Atencao: eram esperados 23 arquivos. Verifique o commit e o caminho docs/."
         )
 
-    print(f"Chunks criados: {len(chunks)}")
+    if loaded_from_cache:
+        print(f"Indice local carregado: {len(chunks)} chunks.")
+    else:
+        print(f"Indice criado e salvo localmente: {len(chunks)} chunks.")
     if chunks and arguments.inspect_corpus:
         first_chunk = chunks[0]
         print("\nExemplo do primeiro chunk:")
@@ -185,8 +220,6 @@ def main() -> None:
         return
 
     try:
-        application.retrieval_agent.create_index(chunks)
-        print("Indice semantico criado em memoria.")
         results = application.retrieval_agent.search(arguments.question, arguments.top_k)
     except (RuntimeError, ValueError) as error:
         print(f"Nao foi possivel executar a busca: {error}")

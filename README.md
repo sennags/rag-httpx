@@ -34,19 +34,22 @@ etapas, na recuperacao semantica.
    ```
 
 3. O programa clona o HTTPX em `data/httpx`, fixa o commit
-   `b5addb64f0161ff6bfe94c124ef76f6a1fba5254`, lista os Markdown de `docs/` e
-   exibe um chunk rastreavel de exemplo.
-4. A validacao esperada nesta etapa e a descoberta de 23 arquivos e a criacao
+   `b5addb64f0161ff6bfe94c124ef76f6a1fba5254` e cria um indice local em
+   `data/rag_index.pkl` na primeira execucao.
+4. Nas consultas seguintes, o indice e carregado sem recriar chunks ou embeddings.
+   Ele e recriado se o commit, o modelo, a configuracao de chunking ou os
+   documentos forem alterados.
+5. A validacao esperada nesta etapa e a descoberta de 23 arquivos e a criacao
    de chunks.
-5. Para consultar a documentacao em portugues:
+6. Para consultar a documentacao em portugues:
 
    ```bash
    python main.py --question "Como desativar o timeout de uma requisicao?"
    ```
 
-6. Para listar os 23 arquivos e inspecionar um chunk antes da busca, acrescente
+7. Para listar os 23 arquivos e inspecionar um chunk antes da busca, acrescente
    `--inspect-corpus` ao comando.
-7. Para gerar uma resposta opcional com Gemini, crie um arquivo `.env` na raiz
+8. Para gerar uma resposta opcional com Gemini, crie um arquivo `.env` na raiz
    do projeto com a linha abaixo e use `--generate`:
 
    ```text
@@ -61,7 +64,7 @@ etapas, na recuperacao semantica.
    ```
 
    A chave nao deve ser adicionada a arquivos, commits, README ou video.
-8. Para executar a avaliacao de recuperacao com oito perguntas proprias:
+9. Para executar a avaliacao de recuperacao com oito perguntas proprias:
 
    ```bash
    python evaluate_retrieval.py
@@ -76,7 +79,8 @@ etapas, na recuperacao semantica.
 - [x] Busca por similaridade
 - [x] Integracao opcional com Gemini implementada
 - [x] Chamada real ao Gemini validada com uma chave configurada localmente
-- [ ] Perguntas de teste
+- [x] Perguntas de teste
+- [x] Indice local persistido para reutilizar chunks e embeddings
 
 ## Decisoes tecnicas
 
@@ -95,6 +99,13 @@ Cada `DocumentChunk` guarda `chunk_id`, `text`, `source_path` e `section`. O
 caminho e relativo ao repositorio HTTPX, o que permite reencontrar o documento
 de origem na saida da busca.
 
+### Persistencia do indice
+
+O indice local fica em `data/rag_index.pkl`. Ele guarda os chunks e embeddings
+criados localmente para que consultas posteriores nao precisem recriar o corpus.
+O cache e invalidado quando mudam o commit HTTPX, modelo, tamanho, overlap ou
+assinatura dos documentos.
+
 ### Embeddings e busca
 
 - Modelo: `intfloat/multilingual-e5-small`.
@@ -108,6 +119,7 @@ de origem na saida da busca.
 ### Guardrails
 
 - Perguntas vazias sao recusadas com mensagem compreensivel.
+- Perguntas com menos de quatro caracteres sao recusadas.
 - `top_k` deve ser um inteiro entre 3 e 5.
 - O indice precisa existir antes da busca.
 - Um corpus sem chunks nao pode ser indexado.
@@ -132,6 +144,8 @@ deve ser reavaliado com novas perguntas.
 O Gemini e uma extensao opcional e pode retornar indisponibilidade temporaria
 ou limite de uso. Nessas situacoes, a busca local continua retornando os trechos
 e fontes sem depender da API.
+O indice e persistido somente como cache local e nao deve ser carregado de fontes
+desconhecidas. Ele e ignorado pelo Git por estar dentro de `data/`.
 Consultas amplas podem recuperar uma secao relacionada, mas nao necessariamente
 a mais didatica. Por exemplo, uma pergunta sobre recursos do HTTPX priorizou
 dependencias e pacotes relacionados em vez da lista principal de funcionalidades.

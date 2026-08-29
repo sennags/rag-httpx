@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+import pickle
 import re
 
 
@@ -36,6 +37,11 @@ class RetrievalAgent:
         self._model = None
         self._chunks: list[DocumentChunk] = []
         self._embeddings = None
+
+    @property
+    def chunks(self) -> list[DocumentChunk]:
+        """Expone os chunks carregados no indice atual."""
+        return self._chunks
 
     def find_markdown_documents(self, repository_dir: Path) -> list[Path]:
         """Retorna os Markdown de docs/ em ordem deterministica."""
@@ -89,11 +95,51 @@ class RetrievalAgent:
         self._chunks = chunks
         self._embeddings = embeddings
 
+    def load_index(self, cache_path: Path, metadata: dict[str, str | int]) -> bool:
+        """Carrega um indice local somente quando seus metadados correspondem."""
+        if not cache_path.is_file():
+            return False
+
+        try:
+            with cache_path.open("rb") as cache_file:
+                cache = pickle.load(cache_file)
+        except (AttributeError, EOFError, OSError, pickle.UnpicklingError):
+            return False
+
+        if cache.get("metadata") != metadata:
+            return False
+
+        chunks = cache.get("chunks")
+        embeddings = cache.get("embeddings")
+        if not isinstance(chunks, list) or not chunks or embeddings is None:
+            return False
+
+        self._chunks = chunks
+        self._embeddings = embeddings
+        return True
+
+    def save_index(self, cache_path: Path, metadata: dict[str, str | int]) -> None:
+        """Persiste o indice criado localmente para consultas futuras."""
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        temporary_path = cache_path.with_suffix(".tmp")
+        with temporary_path.open("wb") as cache_file:
+            pickle.dump(
+                {
+                    "metadata": metadata,
+                    "chunks": self._chunks,
+                    "embeddings": self._embeddings,
+                },
+                cache_file,
+            )
+        temporary_path.replace(cache_path)
+
     def search(self, question: str, top_k: int = 3) -> list[SearchResult]:
         """Retorna os chunks mais similares a uma pergunta valida."""
         question = question.strip()
         if not question:
             raise ValueError("A pergunta nao pode estar vazia.")
+        if len(question) < 4:
+            raise ValueError("A pergunta deve ter pelo menos 4 caracteres.")
         if isinstance(top_k, bool) or not isinstance(top_k, int) or not 3 <= top_k <= 5:
             raise ValueError("top_k deve ser um inteiro entre 3 e 5.")
         if self._embeddings is None:
