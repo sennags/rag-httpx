@@ -69,6 +69,8 @@ etapas, na recuperacao semantica.
    ```bash
    python evaluate_retrieval.py
    ```
+10. Para iniciar a interface web local, execute `python web_app.py` e abra
+    `http://127.0.0.1:5000` no navegador.
 
 ## Estado atual
 

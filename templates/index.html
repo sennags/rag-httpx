@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HTTPX Field Notes</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <p class="eyebrow">DOCUMENTATION RETRIEVAL / 23 MARKDOWN FILES</p>
+      <h1>HTTPX<br><em>Field Notes</em></h1>
+      <p class="lede">Pergunte em portugues. O sistema encontra as evidencias em ingles, com arquivo, secao e score.</p>
+    </header>
+
+    <form method="post" class="search-box">
+      <label for="question">Sua pergunta</label>
+      <textarea id="question" name="question" required placeholder="Como desativar o timeout de uma requisicao?">{{ question }}</textarea>
+      <div class="controls">
+        <label>Resultados
+          <select name="top_k"><option value="3">3</option><option value="4">4</option><option value="5">5</option></select>
+        </label>
+        <label class="toggle"><input type="checkbox" name="generate"> Gerar resposta com Gemini</label>
+        <button type="submit">Pesquisar <span>↗</span></button>
+      </div>
+    </form>
+
+    {% if error %}<p class="notice error">{{ error }}</p>{% endif %}
+    {% if low_evidence %}<p class="notice">Evidencia insuficiente: os resultados abaixo nao sustentam uma resposta confiavel.</p>{% endif %}
+
+    {% if answer %}<section class="answer"><p class="eyebrow">RESPOSTA FUNDAMENTADA</p><div>{{ answer }}</div></section>{% endif %}
+
+    {% if results %}
+    <section class="results">
+      <div class="results-head"><p class="eyebrow">EVIDENCIAS RECUPERADAS</p><span>{{ results|length }} resultados</span></div>
+      {% for result in results %}
+      <article class="result-card">
+        <div class="rank">0{{ result.rank }}</div>
+        <div class="result-content">
+          <div class="meta"><span>{{ result.chunk.source_path }}</span><span>{{ result.chunk.section }}</span><strong>{{ '%.4f'|format(result.score) }}</strong></div>
+          <p>{{ result.chunk.text }}</p>
+        </div>
+      </article>
+      {% endfor %}
+    </section>
+    {% endif %}
+  </main>
+</body>
+</html>

@@ -67,6 +67,24 @@ class RetrievalAgentTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "GEMINI_API_KEY nao esta configurada"):
                 RAGApplication(Path("unused")).generate_answer("Pergunta", [result])
 
+    def test_cached_index_is_rejected_when_metadata_changes(self) -> None:
+        chunk = DocumentChunk("docs/guide.md:1", "text", "docs/guide.md", "Guide")
+        metadata = {"commit": "one", "model": "model", "chunk_size": 80}
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            cache_path = Path(temporary_directory) / "rag_index.pkl"
+            agent = RetrievalAgent()
+            agent._chunks = [chunk]
+            agent._embeddings = [[0.1]]
+            agent.save_index(cache_path, metadata)
+
+            self.assertTrue(RetrievalAgent().load_index(cache_path, metadata))
+            self.assertFalse(
+                RetrievalAgent().load_index(
+                    cache_path, {"commit": "two", "model": "model", "chunk_size": 80}
+                )
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
