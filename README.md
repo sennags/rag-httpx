@@ -1,13 +1,3 @@
----
-title: HTTPX Field Notes
-emoji: "📚"
-colorFrom: yellow
-colorTo: red
-sdk: docker
-app_port: 7860
-pinned: false
----
-
 # Mini-RAG sobre a documentacao do HTTPX
 
 ## Identificacao
