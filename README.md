@@ -3,7 +3,7 @@
 ## Identificacao
 
 - Nome do aluno: Sillas Sena
-- Formato da solucao: script Python de terminal
+- Formato da solucao: script Python de terminal e aplicacao web Flask local
 - Link do video: a preencher
 
 ## Objetivo
@@ -16,7 +16,7 @@ Markdown que serao indexados.
 
 ```text
 RAGApplication -> RetrievalAgent -> documentos -> chunks -> embeddings -> busca
-               -> Gemini opcional -> resposta fundamentada
+                -> Gemini ou Ollama opcionais -> resposta fundamentada
 ```
 
 `RAGApplication` e o agente principal: prepara o repositorio e coordena o
@@ -67,11 +67,18 @@ etapas, na recuperacao semantica.
 9. Para executar a avaliacao de recuperacao com oito perguntas proprias:
 
    ```bash
-   python evaluate_retrieval.py
-   ```
-10. Para iniciar a interface web local, execute `python web_app.py` e abra
+    python evaluate_retrieval.py
+    ```
+10. Para executar os testes automatizados:
+
+    ```bash
+    python -m unittest discover -s tests -v
+    ```
+
+11. Para iniciar a interface web local, execute `python web_app.py` e abra
     `http://127.0.0.1:5000` no navegador.
-11. Para configurar a geracao local sem API key, consulte [Ollama local](#ollama-local).
+12. Para configurar a geracao local sem API key, consulte [Ollama local](#ollama-local).
+13. Para publicar a interface no Render, siga [Deploy no Render](RENDER_DEPLOYMENT.md).
 
 ## Ollama local
 
@@ -102,6 +109,14 @@ opcional: a busca com trechos e fontes funciona mesmo sem Ollama.
 
 O Ollama e executado no computador do usuario e nao e usado no modo "Somente
 evidencias". Ele tambem nao faz parte de um deploy gratuito no Render.
+
+## Deploy no Render
+
+O projeto inclui `render.yaml` e `Dockerfile` para publicar a interface Flask
+como um Web Service no Render. A implantacao nao exige `GEMINI_API_KEY` quando
+o usuario utiliza o modo "Somente evidencias". Consulte
+[RENDER_DEPLOYMENT.md](RENDER_DEPLOYMENT.md) para os passos, variaveis opcionais
+e limitacoes do plano gratuito.
 
 ## Estado atual
 
@@ -245,12 +260,31 @@ uma amostra pequena e nao substitui as perguntas reservadas da correcao.
 
 ## Uso de ferramentas de IA
 
-- Ferramentas utilizadas: OpenCode e Gemini API.
-- Tarefas em que ajudaram: OpenCode apoiou a orientacao e revisao da estrutura;
-  Gemini pode gerar uma resposta opcional fundamentada nos trechos recuperados.
+- Ferramenta de desenvolvimento utilizada: OpenCode, para orientacao, revisao e
+  implementacao assistida.
+- Ferramentas integradas ao projeto: Gemini API e Ollama. Ambas sao opcionais e
+  geram respostas apenas a partir dos chunks recuperados; a busca funciona sem
+  qualquer API externa.
 - Exemplo representativo de orientacao: separar o agente coordenador do agente
-  de recuperacao e validar primeiro os 23 documentos obrigatorios.
-- O que foi testado, modificado ou validado por voce: a preencher apos executar.
+  de recuperacao, validar primeiro os 23 documentos obrigatorios e preservar as
+  fontes em cada resultado.
+- Validacoes feitas pelo aluno: descoberta dos 23 Markdown, criacao de 306
+  chunks, avaliacao de recuperacao com 8/8 fontes esperadas no top 3, execucao
+  de 11 testes automatizados e verificacao manual da interface local com fontes
+  e scores visiveis. A execucao tambem foi repetida em ambiente virtual novo,
+  com clone e indexacao temporarios do HTTPX.
+
+## Referencias e codigo externo
+
+- Documentacao e repositorio HTTPX: <https://www.python-httpx.org/> e
+  <https://github.com/encode/httpx>.
+- Modelo de embeddings E5: <https://huggingface.co/intfloat/multilingual-e5-small>.
+- Biblioteca Sentence Transformers: <https://www.sbert.net/>.
+- SDK Google Gen AI para Python: <https://github.com/googleapis/python-genai>.
+- Ollama: <https://ollama.com/>.
+- Flask: <https://flask.palletsprojects.com/>.
+- Nao foi copiado codigo de terceiros alem do uso das bibliotecas declaradas em
+  `requirements.txt` e dos exemplos referenciados pelas documentacoes acima.
 
 ## Seguranca
 

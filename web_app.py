@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+import subprocess
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -49,7 +51,13 @@ def index():
             if generator == "ollama" and not low_evidence:
                 answer = rag.generate_local_answer(question, results)
                 response_label = "RESPOSTA FUNDAMENTADA"
-        except (RuntimeError, ValueError) as exception:
+        except (
+            FileNotFoundError,
+            OSError,
+            RuntimeError,
+            ValueError,
+            subprocess.CalledProcessError,
+        ) as exception:
             error = str(exception)
 
     return render_template(
@@ -66,4 +74,4 @@ def index():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", "5000")))

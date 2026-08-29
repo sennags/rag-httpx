@@ -235,7 +235,17 @@ def main() -> None:
     load_dotenv(Path(__file__).with_name(".env"))
     arguments = parse_arguments()
     application = RAGApplication(arguments.repository_dir)
-    documents, chunks, loaded_from_cache = application.prepare_index()
+    try:
+        documents, chunks, loaded_from_cache = application.prepare_index()
+    except (
+        FileNotFoundError,
+        OSError,
+        RuntimeError,
+        ValueError,
+        subprocess.CalledProcessError,
+    ) as error:
+        print(f"Nao foi possivel preparar o corpus: {error}")
+        return
 
     print(f"Documentos Markdown encontrados: {len(documents)}")
     if arguments.inspect_corpus:

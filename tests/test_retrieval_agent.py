@@ -1,8 +1,12 @@
+import argparse
 import tempfile
 import unittest
+from contextlib import redirect_stdout
+from io import StringIO
 from pathlib import Path
 from unittest.mock import patch
 
+import main
 from main import RAGApplication
 from retrieval_agent import DocumentChunk, RetrievalAgent, SearchResult
 
@@ -52,6 +56,32 @@ class RetrievalAgentTests(unittest.TestCase):
     def test_search_requires_an_index(self) -> None:
         with self.assertRaisesRegex(RuntimeError, "indice ainda nao foi criado"):
             RetrievalAgent().search("Como usar HTTPX?")
+
+    def test_command_reports_a_corpus_preparation_error(self) -> None:
+        output = StringIO()
+        arguments = argparse.Namespace(repository_dir=Path("unused"))
+
+        with (
+            patch("main.parse_arguments", return_value=arguments),
+            patch.object(
+                main.RAGApplication,
+                "prepare_index",
+                side_effect=ValueError("O corpus esta vazio e nao pode ser indexado."),
+            ),
+            redirect_stdout(output),
+        ):
+            main.main()
+
+        self.assertIn("Nao foi possivel preparar o corpus", output.getvalue())
+        self.assertIn("O corpus esta vazio", output.getvalue())
+
+    def test_prepare_index_rejects_a_repository_without_docs(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            application = RAGApplication(Path(temporary_directory))
+
+            with patch.object(application, "_obtain_httpx_repository"):
+                with self.assertRaisesRegex(FileNotFoundError, "pasta de documentacao"):
+                    application.prepare_index()
 
     def test_low_score_is_reported_as_insufficient_evidence(self) -> None:
         chunk = DocumentChunk("docs/guide.md:1", "text", "docs/guide.md", "Guide")
