@@ -9,7 +9,7 @@
 <body>
   <main class="shell">
     <header>
-      <p class="eyebrow">DOCUMENTATION RETRIEVAL / 23 MARKDOWN FILES</p>
+      <div><p class="owner">SILLAS SENA / MINI-RAG</p><p class="eyebrow">DOCUMENTATION RETRIEVAL / 23 MARKDOWN FILES</p></div>
       <h1>HTTPX<br><em>Field Notes</em></h1>
       <p class="lede">Pergunte em portugues. O sistema encontra as evidencias em ingles, com arquivo, secao e score.</p>
     </header>
@@ -19,9 +19,16 @@
       <textarea id="question" name="question" required placeholder="Como desativar o timeout de uma requisicao?">{{ question }}</textarea>
       <div class="controls">
         <label>Resultados
-          <select name="top_k"><option value="3">3</option><option value="4">4</option><option value="5">5</option></select>
+          <select name="top_k"><option value="3" {% if top_k == "3" %}selected{% endif %}>3</option><option value="4" {% if top_k == "4" %}selected{% endif %}>4</option><option value="5" {% if top_k == "5" %}selected{% endif %}>5</option></select>
         </label>
-        <label class="toggle"><input type="checkbox" name="generate"> Gerar resposta com Gemini</label>
+        <label class="toggle">Geracao
+          <select name="generator">
+            <option value="" {% if not generator %}selected{% endif %}>Somente evidencias</option>
+            <option value="gemini" {% if generator == "gemini" %}selected{% endif %}>Gemini API</option>
+            <option value="ollama" {% if generator == "ollama" %}selected{% endif %}>Ollama local</option>
+          </select>
+        </label>
+        <a id="ollama-help" class="ollama-help" href="https://github.com/sennags/desafio-rag-sennags#ollama-local" target="_blank" rel="noreferrer">Clique aqui para poder usar o Ollama!</a>
         <button type="submit">Pesquisar <span>↗</span></button>
       </div>
     </form>
@@ -29,7 +36,7 @@
     {% if error %}<p class="notice error">{{ error }}</p>{% endif %}
     {% if low_evidence %}<p class="notice">Evidencia insuficiente: os resultados abaixo nao sustentam uma resposta confiavel.</p>{% endif %}
 
-    {% if answer %}<section class="answer"><p class="eyebrow">RESPOSTA FUNDAMENTADA</p><div>{{ answer }}</div></section>{% endif %}
+    {% if answer %}<section class="answer"><p class="eyebrow">{{ response_label }}</p><div>{{ answer }}</div></section>{% endif %}
 
     {% if results %}
     <section class="results">
@@ -46,5 +53,14 @@
     </section>
     {% endif %}
   </main>
+  <script>
+    const generator = document.querySelector('select[name="generator"]');
+    const ollamaHelp = document.querySelector('#ollama-help');
+    const updateOllamaHelp = () => {
+      ollamaHelp.hidden = generator.value !== 'ollama';
+    };
+    generator.addEventListener('change', updateOllamaHelp);
+    updateOllamaHelp();
+  </script>
 </body>
 </html>

@@ -1,3 +1,13 @@
+---
+title: HTTPX Field Notes
+emoji: "📚"
+colorFrom: yellow
+colorTo: red
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # Mini-RAG sobre a documentacao do HTTPX
 
 ## Identificacao
@@ -71,6 +81,37 @@ etapas, na recuperacao semantica.
    ```
 10. Para iniciar a interface web local, execute `python web_app.py` e abra
     `http://127.0.0.1:5000` no navegador.
+11. Para configurar a geracao local sem API key, consulte [Ollama local](#ollama-local).
+
+## Ollama local
+
+O Ollama permite gerar uma resposta local, sem `GEMINI_API_KEY`. Ele continua
+opcional: a busca com trechos e fontes funciona mesmo sem Ollama.
+
+1. Instale o Ollama em <https://ollama.com/download>.
+2. Baixe o modelo usado neste projeto. O download e de aproximadamente 1,9 GB:
+
+   ```powershell
+   ollama pull qwen2.5:3b
+   ```
+
+3. Inicie o servidor local:
+
+   ```powershell
+   ollama serve
+   ```
+
+4. Em outro terminal, execute uma pergunta com geracao local:
+
+   ```powershell
+   python main.py --question "Como desativar o timeout de uma requisicao?" --generate-local
+   ```
+
+5. Na interface web, selecione **Ollama local** no campo **Geracao**. O link
+   vermelho exibido ao lado leva a esta secao.
+
+O Ollama e executado no computador do usuario e nao e usado no modo "Somente
+evidencias". Ele tambem nao faz parte de um deploy gratuito no Render.
 
 ## Estado atual
 
@@ -81,6 +122,7 @@ etapas, na recuperacao semantica.
 - [x] Busca por similaridade
 - [x] Integracao opcional com Gemini implementada
 - [x] Chamada real ao Gemini validada com uma chave configurada localmente
+- [x] Geracao local com Ollama validada com `qwen2.5:3b`
 - [x] Perguntas de teste
 - [x] Indice local persistido para reutilizar chunks e embeddings
 
@@ -122,6 +164,8 @@ assinatura dos documentos.
 
 - Perguntas vazias sao recusadas com mensagem compreensivel.
 - Perguntas com menos de quatro caracteres sao recusadas.
+- O modo "Somente evidencias" nao chama Gemini nem Ollama: ele apenas recupera
+  trechos, scores e fontes da documentacao.
 - `top_k` deve ser um inteiro entre 3 e 5.
 - O indice precisa existir antes da busca.
 - Um corpus sem chunks nao pode ser indexado.
@@ -134,6 +178,18 @@ assinatura dos documentos.
 - Modelo: `gemini-3.6-flash` pela Gemini API.
 - O modelo recebe somente a pergunta e os chunks recuperados, nunca a chave de
   API ou documentos fora do contexto.
+- Alternativa local: `qwen2.5:3b` executado por Ollama. Ela nao exige API key,
+  mas precisa estar instalada no computador que executa a aplicacao.
+- Validacao: a resposta local sobre timeout citou
+  `docs/advanced/timeouts.md`, secao `Setting a default timeout on a client`.
+
+### Tentativa descartada
+
+Foi testado um roteador conversacional com Ollama para classificar saudações,
+perguntas sobre a finalidade do assistente e perguntas fora do escopo antes da
+busca. A tentativa foi removida porque introduziu comportamento fora do objetivo
+do desafio e interferiu no modo "Somente evidencias". O Ollama foi mantido apenas
+como geracao opcional fundamentada nos chunks recuperados.
 
 ## Limitacoes conhecidas
 

@@ -27,29 +27,39 @@ def prepare_rag() -> None:
 @app.route("/", methods=["GET", "POST"])
 def index():
     question = ""
+    top_k = "3"
+    generator = ""
     results = []
     answer = None
+    response_label = None
     error = None
     low_evidence = False
 
     if request.method == "POST":
         question = request.form.get("question", "")
-        top_k = int(request.form.get("top_k", "3"))
-        generate = request.form.get("generate") == "on"
+        top_k = request.form.get("top_k", "3")
+        generator = request.form.get("generator", "")
         try:
             prepare_rag()
-            results = rag.retrieval_agent.search(question, top_k)
+            results = rag.retrieval_agent.search(question, int(top_k))
             low_evidence = not rag.retrieval_agent.has_sufficient_evidence(results)
-            if generate and not low_evidence:
+            if generator == "gemini" and not low_evidence:
                 answer = rag.generate_answer(question, results)
+                response_label = "RESPOSTA FUNDAMENTADA"
+            if generator == "ollama" and not low_evidence:
+                answer = rag.generate_local_answer(question, results)
+                response_label = "RESPOSTA FUNDAMENTADA"
         except (RuntimeError, ValueError) as exception:
             error = str(exception)
 
     return render_template(
         "index.html",
         question=question,
+        top_k=top_k,
+        generator=generator,
         results=results,
         answer=answer,
+        response_label=response_label,
         error=error,
         low_evidence=low_evidence,
     )

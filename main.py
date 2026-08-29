@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import json
 import os
 import subprocess
+from urllib.error import URLError
+from urllib.request import Request, urlopen
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -17,6 +20,8 @@ HTTPX_REPOSITORY = "https://github.com/encode/httpx.git"
 HTTPX_COMMIT = "b5addb64f0161ff6bfe94c124ef76f6a1fba5254"
 EXPECTED_DOCUMENT_COUNT = 23
 GEMINI_MODEL = "gemini-3.6-flash"
+OLLAMA_MODEL = "qwen2.5:3b"
+OLLAMA_URL = "http://127.0.0.1:11434/api/generate"
 CHUNK_SIZE = 80
 CHUNK_OVERLAP = 15
 
@@ -111,6 +116,44 @@ class RAGApplication:
             raise RuntimeError("O Gemini retornou uma resposta vazia.")
         return response.text.strip()
 
+    def generate_local_answer(self, question: str, results: list[SearchResult]) -> str:
+        """Gera resposta local com Ollama usando somente os chunks recuperados."""
+        if not results:
+            raise RuntimeError("Nao existem trechos recuperados para enviar ao Ollama.")
+
+        return self._request_ollama(self._build_generation_prompt(question, results))
+
+    @staticmethod
+    def _request_ollama(prompt: str) -> str:
+        request_body = json.dumps(
+            {
+                "model": OLLAMA_MODEL,
+                "prompt": prompt,
+                "stream": False,
+            }
+        ).encode("utf-8")
+        request = Request(
+            OLLAMA_URL,
+            data=request_body,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            with urlopen(request, timeout=120) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+        except URLError as error:
+            raise RuntimeError(
+                "O Ollama nao esta acessivel. Instale-o, execute `ollama serve` e "
+                f"baixe o modelo com `ollama pull {OLLAMA_MODEL}`."
+            ) from error
+        except TimeoutError as error:
+            raise RuntimeError("O Ollama demorou demais para responder.") from error
+
+        answer = payload.get("response", "").strip()
+        if not answer:
+            raise RuntimeError("O Ollama retornou uma resposta vazia.")
+        return answer
+
     @staticmethod
     def _build_generation_prompt(question: str, results: list[SearchResult]) -> str:
         context = "\n\n".join(
@@ -174,10 +217,16 @@ def parse_arguments() -> argparse.Namespace:
         action="store_true",
         help="Exibe os arquivos e um chunk de exemplo antes da busca.",
     )
-    parser.add_argument(
+    generation_group = parser.add_mutually_exclusive_group()
+    generation_group.add_argument(
         "--generate",
         action="store_true",
         help="Gera uma resposta com Gemini a partir dos resultados recuperados.",
+    )
+    generation_group.add_argument(
+        "--generate-local",
+        action="store_true",
+        help="Gera uma resposta local com Ollama a partir dos resultados recuperados.",
     )
     return parser.parse_args()
 
@@ -231,17 +280,22 @@ def main() -> None:
             "\nAviso: nao encontrei evidencia suficiente na documentacao HTTPX para "
             "responder com confianca a essa pergunta."
         )
-        if arguments.generate:
-            print("O Gemini nao foi chamado porque a evidencia recuperada e fraca.")
+        if arguments.generate or arguments.generate_local:
+            print("A geracao nao foi chamada porque a evidencia recuperada e fraca.")
         return
 
-    if arguments.generate:
+    if arguments.generate or arguments.generate_local:
         try:
-            answer = application.generate_answer(arguments.question, results)
+            if arguments.generate_local:
+                answer = application.generate_local_answer(arguments.question, results)
+                provider = "Ollama local"
+            else:
+                answer = application.generate_answer(arguments.question, results)
+                provider = "Gemini"
         except RuntimeError as error:
             print(f"\nNao foi possivel gerar a resposta: {error}")
             return
-        print(f"\nResposta gerada pelo Gemini:\n{answer}")
+        print(f"\nResposta gerada por {provider}:\n{answer}")
 
 
 def print_results(results: list[SearchResult]) -> None:
