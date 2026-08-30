@@ -76,9 +76,8 @@ etapas, na recuperacao semantica.
     ```
 
 11. Para iniciar a interface web local, execute `python web_app.py` e abra
-    `http://127.0.0.1:5000` no navegador.
+    `http://127.0.0.1:5050` no navegador.
 12. Para configurar a geracao local sem API key, consulte [Ollama local](#ollama-local).
-13. Para publicar a interface no Render, siga [Deploy no Render](RENDER_DEPLOYMENT.md).
 
 ## Ollama local
 
@@ -108,15 +107,7 @@ opcional: a busca com trechos e fontes funciona mesmo sem Ollama.
    vermelho exibido ao lado leva a esta secao.
 
 O Ollama e executado no computador do usuario e nao e usado no modo "Somente
-evidencias". Ele tambem nao faz parte de um deploy gratuito no Render.
-
-## Deploy no Render
-
-O projeto inclui `render.yaml` e `Dockerfile` para publicar a interface Flask
-como um Web Service no Render. A implantacao nao exige `GEMINI_API_KEY` quando
-o usuario utiliza o modo "Somente evidencias". Consulte
-[RENDER_DEPLOYMENT.md](RENDER_DEPLOYMENT.md) para os passos, variaveis opcionais
-e limitacoes do plano gratuito.
+evidencias".
 
 ## Estado atual
 

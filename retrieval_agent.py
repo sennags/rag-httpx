@@ -90,7 +90,7 @@ class RetrievalAgent:
         embeddings = model.encode(
             [f"passage: {chunk.text}" for chunk in chunks],
             normalize_embeddings=True,
-            show_progress_bar=True,
+            show_progress_bar=False,
         )
         self._chunks = chunks
         self._embeddings = embeddings
@@ -167,11 +167,13 @@ class RetrievalAgent:
         if self._model is None:
             try:
                 from sentence_transformers import SentenceTransformer
+                from transformers.utils import logging as transformers_logging
             except ImportError as error:
                 raise RuntimeError(
                     "sentence-transformers nao esta instalado. Execute "
                     "pip install -r requirements.txt."
                 ) from error
+            transformers_logging.disable_progress_bar()
             self._model = SentenceTransformer(self.model_name)
         return self._model
 

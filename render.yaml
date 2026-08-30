@@ -1,6 +1,0 @@
-services:
-  - type: web
-    name: httpx-rag-sennags
-    runtime: docker
-    plan: free
-    healthCheckPath: /

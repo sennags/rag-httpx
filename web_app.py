@@ -43,14 +43,6 @@ def index():
         generator = request.form.get("generator", "")
         try:
             prepare_rag()
-            results = rag.retrieval_agent.search(question, int(top_k))
-            low_evidence = not rag.retrieval_agent.has_sufficient_evidence(results)
-            if generator == "gemini" and not low_evidence:
-                answer = rag.generate_answer(question, results)
-                response_label = "RESPOSTA FUNDAMENTADA"
-            if generator == "ollama" and not low_evidence:
-                answer = rag.generate_local_answer(question, results)
-                response_label = "RESPOSTA FUNDAMENTADA"
         except (
             FileNotFoundError,
             OSError,
@@ -58,7 +50,25 @@ def index():
             ValueError,
             subprocess.CalledProcessError,
         ) as exception:
-            error = str(exception)
+            error = f"Nao foi possivel preparar o corpus: {exception}"
+        else:
+            try:
+                results = rag.retrieval_agent.search(question, int(top_k))
+                low_evidence = not rag.retrieval_agent.has_sufficient_evidence(results)
+                if generator == "gemini" and not low_evidence:
+                    answer = rag.generate_answer(question, results)
+                    response_label = "RESPOSTA FUNDAMENTADA"
+                if generator == "ollama" and not low_evidence:
+                    answer = rag.generate_local_answer(question, results)
+                    response_label = "RESPOSTA FUNDAMENTADA"
+            except (
+                FileNotFoundError,
+                OSError,
+                RuntimeError,
+                ValueError,
+                subprocess.CalledProcessError,
+            ) as exception:
+                error = f"Nao foi possivel executar a busca: {exception}"
 
     return render_template(
         "index.html",
@@ -74,4 +84,10 @@ def index():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", "5000")))
+    app.run(
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", "5050")),
+        debug=False,
+        threaded=False,
+        use_reloader=False,
+    )
