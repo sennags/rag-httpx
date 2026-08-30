@@ -4,7 +4,7 @@
 
 - Nome do aluno: Sillas Sena
 - Formato da solucao: script Python de terminal e aplicacao web Flask local
-- Link do video: a preencher
+- Link do video: https://www.youtube.com/watch?v=w7lyBBvClAc
 
 ## Objetivo
 
