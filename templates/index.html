@@ -34,7 +34,7 @@
     </form>
 
     {% if error %}<p class="notice error">{{ error }}</p>{% endif %}
-    {% if low_evidence %}<p class="notice">Evidencia insuficiente: os resultados abaixo nao sustentam uma resposta confiavel.</p>{% endif %}
+    {% if low_evidence %}<p class="notice">Confianca abaixo do limiar: os trechos abaixo sao candidatos para conferencia nas fontes. A geracao foi bloqueada.</p>{% endif %}
 
     {% if answer %}<section class="answer"><p class="eyebrow">{{ response_label }}</p><div>{{ answer }}</div></section>{% endif %}
 

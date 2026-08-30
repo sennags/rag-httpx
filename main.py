@@ -287,8 +287,8 @@ def main() -> None:
     print_results(results)
     if not application.retrieval_agent.has_sufficient_evidence(results):
         print(
-            "\nAviso: nao encontrei evidencia suficiente na documentacao HTTPX para "
-            "responder com confianca a essa pergunta."
+            "\nAviso: a confianca da evidencia recuperada ficou abaixo do limiar. "
+            "Confira os trechos e as fontes antes de usar essa informacao."
         )
         if arguments.generate or arguments.generate_local:
             print("A geracao nao foi chamada porque a evidencia recuperada e fraca.")
